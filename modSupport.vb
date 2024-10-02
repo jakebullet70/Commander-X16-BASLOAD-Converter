@@ -1,0 +1,151 @@
+﻿Imports System.Text.RegularExpressions
+
+Module modSupport
+
+    Function ReplaceFirstOccurrence(input As String, search As String, replacement As String) As String
+        '--- Create a Regex object with IgnoreCase option
+        Dim regex As New Regex(regex.Escape(search), RegexOptions.IgnoreCase)
+
+        '--- Replace only the first occurrence
+        Return regex.Replace(input, replacement, 1)
+    End Function
+
+    Sub CleanUpSyntex(ByRef pl As String)
+
+        If pl.Contains("IF", StringComparison.CurrentCultureIgnoreCase) AndAlso
+                pl.Contains("THEN", StringComparison.CurrentCultureIgnoreCase) AndAlso
+                pl.Contains("GOTO", StringComparison.CurrentCultureIgnoreCase) Then
+
+            If Not pl.Contains("THENON", StringComparison.CurrentCultureIgnoreCase) AndAlso
+                    Not pl.Contains("THEN ON", StringComparison.CurrentCultureIgnoreCase) Then
+
+                pl = ReplaceIgnoreQuotes(pl, "THENGOTO", "THEN ")
+                pl = ReplaceIgnoreQuotes(pl, "THEN GOTO", "THEN ")
+                pl = ReplaceIgnoreQuotes(pl, "THEN  GOTO", "THEN ")
+            End If
+        End If
+
+    End Sub
+
+    Function GetLineNumFromStr(s As String) As String
+
+        s = s.TrimStart
+
+
+        Dim ret As String = ""
+        Dim spart As String = ""
+        For x = 0 To s.Length - 1
+            spart = s.Substring(x, 1)
+            If IsNumeric(spart) Then
+                ret &= spart
+            Else
+                Exit For
+            End If
+        Next
+        Return ret
+
+    End Function
+
+
+    Public Function ReplaceIgnoreQuotes(input As String, oldValue As String, newValue As String) As String
+        Dim result As New System.Text.StringBuilder()
+        Dim insideQuotes As Boolean = False
+        Dim i As Integer = 0
+        Dim oldValueLower As String = oldValue.ToLower() ' Convert oldValue to lowercase for comparison
+
+        While i < input.Length
+            Dim currentChar As Char = input(i)
+
+            ' Check for quotes
+            If currentChar = """"c Then
+                insideQuotes = Not insideQuotes
+                result.Append(currentChar)
+                i += 1
+                Continue While
+            End If
+
+            ' If inside quotes, do not replace
+            If insideQuotes Then
+                result.Append(currentChar)
+                i += 1
+                Continue While
+            End If
+
+            ' If not inside quotes, check for the oldValue (case-insensitive)
+            If i <= input.Length - oldValue.Length AndAlso
+           input.Substring(i, oldValue.Length).ToLower() = oldValueLower Then
+                result.Append(newValue) ' Append the replacement value
+                i += oldValue.Length
+            Else
+                result.Append(currentChar) ' Append the original character
+                i += 1
+            End If
+        End While
+
+        Return result.ToString()
+    End Function
+
+
+
+    Public Sub AddWithSpaceIfNeededIsStart(ByRef line As String, findMe As String, Optional UcaseIt As Boolean = False)
+
+        '--- uses BYREF to adjust line value
+        If line.StartsWith(findMe, StringComparison.CurrentCultureIgnoreCase) Then
+            AddWithSpaceIfNeeded(line, findMe,, UcaseIt)
+        End If
+
+    End Sub
+
+    Public Sub AddWithSpaceIfNeeded(ByRef line As String, findMe As String,
+                                    Optional addPrefixSpace As Boolean = False, Optional UcaseIt As Boolean = False)
+
+        '--- uses BYREF to adjust line value
+        If line.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) AndAlso
+           Not line.Contains(findMe & " ", StringComparison.CurrentCultureIgnoreCase) Then
+            line = line.Replace(findMe,
+                    IIf(addPrefixSpace, " ", "") & findMe & " ",
+                    StringComparison.CurrentCultureIgnoreCase)
+
+
+        End If
+
+        If UcaseIt AndAlso findMe.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) AndAlso line.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) Then
+            line = ReplaceIgnoreQuotes(line, findMe, findMe.ToUpper)
+        End If
+
+
+    End Sub
+
+    Public Function SplitIgnoringQuotes(input As String, delimiter As Char) As String()
+        Dim result As New List(Of String)()
+        Dim currentSection As New Text.StringBuilder()
+        Dim inSingleQuotes As Boolean = False
+        Dim inDoubleQuotes As Boolean = False
+
+        For Each ch As Char In input
+            If ch = "'"c Then
+                inSingleQuotes = Not inSingleQuotes
+            ElseIf ch = """"c Then
+                inDoubleQuotes = Not inDoubleQuotes
+            End If
+
+            If ch = delimiter AndAlso Not inSingleQuotes AndAlso Not inDoubleQuotes Then
+                ' If the character is the delimiter and we're not inside quotes, split here
+                result.Add(currentSection.ToString().Trim())
+                currentSection.Clear()
+            Else
+                ' Otherwise, keep building the current section
+                currentSection.Append(ch)
+            End If
+        Next
+
+        ' Add the final section
+        If currentSection.Length > 0 Then
+            result.Add(currentSection.ToString().Trim())
+        End If
+
+        Return result.ToArray()
+    End Function
+
+
+End Module

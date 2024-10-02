@@ -1,6 +1,11 @@
 ﻿Imports System.IO
+Imports System.Text.RegularExpressions
+Imports Microsoft.Data.Sqlite
+Imports Microsoft.VisualBasic
 
 Public Class convert
+
+    Private oDB As New SqliteConnection '= SqliteConnection("")
 
     Public pERROR_CODE As Integer = 0
     REM error codes:
@@ -15,6 +20,7 @@ Public Class convert
     Public pFLAG_linefeedUseLF As Boolean = False
     Public pFLAG_createLstFile As Boolean = True
     Public pFLAG_petcat As Boolean = False
+    Public pFLAG_ucaseKeyWord As Boolean = False
 
     Private _FileIn As String = ""
     'Private _FileOut As String = ""
@@ -43,6 +49,9 @@ Public Class convert
 
     Public Function Start(arg() As String)
 
+        oDB.ConnectionString = "Data Source=conversion.db3"
+        oDB.Open()
+
         If arg.Length = 0 Then
             pERROR_CODE = -2
             Return False
@@ -65,6 +74,8 @@ Public Class convert
 
         Console.WriteLine("Start...")
 
+        pFLAG_ucaseKeyWord = True
+
         If pFLAG_createLstFile Then
             CreateInfoFile()
         End If
@@ -73,19 +84,13 @@ Public Class convert
         If GetAllGotosGosubs() = False Then Return False
 
         '--- now we shoud have all needed info to remap
-        If RemapLineNums() = False Then Return False
+        InsertNewLineLabels()
 
-        If pFLAG_petcat Then
-            ProcessPETSCII()
-        End If
+        'If RemapLineNums() = False Then Return False
 
+        If CleanUpAndWriteOutFile() = False Then Return False
 
-
-
-        ' Write2File()
-
-        '--- FIND POKES and put in lst file 
-
+        '--- FIND POKES, PEEKS, DEF FN, etc and put in lst file 
 
         If pFLAG_createLstFile Then UpdateInfoFile()
 
@@ -93,128 +98,201 @@ Public Class convert
 
     End Function
 
-    Private Function RemapLineNums() As Boolean
 
-        Console.WriteLine("Remaping lines numbers to labels")
+    Private Function CleanUpAndWriteOutFile() As Boolean
 
+        Const ppADD_PREFIX_SPACE As Boolean = True
+        Dim outStr As New List(Of String)
+
+        For x = 1 To _sourceCodeColl.Count
+
+            Dim isLabel As Boolean = False
+            Dim isRemark As Boolean = False
+
+            Dim o As SrcInfo = _sourceCodeColl(x)
+            pLineNum = o.key
+            pCode = o.item
+
+            '--- fix LF vs CRLF
+            If pFLAG_linefeedUseLF Then
+                pCode = pCode.ReplaceLineEndings(vbLf)
+            Else
+                pCode = pCode.ReplaceLineEndings(vbCrLf)
+            End If
+
+            Dim pcodeOut = ""
+
+            Dim multilines() As String = SplitIgnoringQuotes(pCode, ":")
+            For Each pl As String In multilines
+
+                If pl.StartsWith("LINE") AndAlso pl.Length > 5 AndAlso IsNumeric(pl.Substring(4, 1)) Then
+                    '--- line label, bail
+                    isLabel = True : pcodeOut = pl & ":"
+                    Exit For
+                End If
+
+                If pl.StartsWith("REM", StringComparison.CurrentCultureIgnoreCase) Then
+                    '--- remark statement, bail out
+                    isRemark = True : pcodeOut = pl
+                    Exit For
+                End If
+
+                AddWithSpaceIfNeededIsStart(pl, "FOR")
+                If pl.StartsWith("FOR", StringComparison.CurrentCultureIgnoreCase) Then
+                    AddWithSpaceIfNeeded(pl, "TO", ppADD_PREFIX_SPACE)
+                End If
+
+                AddWithSpaceIfNeeded(pl, "NEXT", ppADD_PREFIX_SPACE)
+                AddWithSpaceIfNeededIsStart(pl, "DATA")
+                AddWithSpaceIfNeededIsStart(pl, "DIM")
+
+                If pl.Contains("ON", StringComparison.CurrentCultureIgnoreCase) AndAlso
+                        (pl.Contains("GOTO", StringComparison.CurrentCultureIgnoreCase) OrElse
+                        pl.Contains("GOSUB", StringComparison.CurrentCultureIgnoreCase)) Then
+                    pl = ReplaceFirstOccurrence(pl, "ON", "ON ")
+                End If
+
+                AddWithSpaceIfNeeded(pl, "GOSUB", ppADD_PREFIX_SPACE, pFLAG_ucaseKeyWord)
+                AddWithSpaceIfNeeded(pl, "GOTO", ppADD_PREFIX_SPACE, pFLAG_ucaseKeyWord)
+
+                AddWithSpaceIfNeeded(pl, "IF")
+                AddWithSpaceIfNeeded(pl, "THEN", ppADD_PREFIX_SPACE)
+                AddWithSpaceIfNeeded(pl, "PRINT")
+                AddWithSpaceIfNeeded(pl, "READ")
+
+
+                'If Not pl.Contains(Chr(34)) Then
+                '    ' if no string const ==> " "
+                '    pl = pl.Replace("  ", " ").Trim '--- any 2 space's to 1
+                'End If
+                'pl.IndexOf()
+
+                If Not isLabel AndAlso Not isRemark Then
+                    pcodeOut &= pl.Trim & ": "
+                End If
+
+            Next
+
+
+
+            If Not isLabel AndAlso Not isRemark Then
+                For Each l In _gotoLst
+                    If pcodeOut.Contains(l) Then
+                        UpdateGotoWithLabels(pcodeOut, l)
+                    End If
+                Next
+                outStr.Add(pcodeOut.Trim.TrimEnd(":"))
+            Else
+                outStr.Add(pcodeOut.Trim)
+            End If
+
+        Next
+
+        WriteOutFile(outStr)
+
+        Return True
+
+    End Function
+
+    Sub UpdateGotoWithLabels(ByRef pl As String, lineNum As String)
+
+        Dim lbl = "LINE" & lineNum
+        Select Case pl
+            Case pl.Contains("GOTO", StringComparison.CurrentCultureIgnoreCase)
+            Case pl.Contains("THEN", StringComparison.CurrentCultureIgnoreCase)
+        End Select
+
+    End Sub
+
+
+    Sub InsertNewLineLabels()
+
+        Console.WriteLine("Creating new line labels...")
+        Dim refactoredLine As String
+
+        '--- GOSUBS, inset new LineLabel if needed
         For Each gline As String In _gosubLst
 
+            refactoredLine = ""
             Dim oo As SrcInfo = _sourceCodeColl.Item(gline)
             pCode = oo.item.ToUpper.Trim
 
-            Dim multilines() As String = pCode.Split(":")
-            For Each partOfLine As String In multilines
+            If pCode.StartsWith("REM", StringComparison.CurrentCultureIgnoreCase) Then
+                Continue For
+            End If
 
-                If Not partOfLine.Contains("GOSUB") Then Continue For
+            Dim multilines() As String = SplitIgnoringQuotes(pCode, ":")
+            For Each pl As String In multilines
 
-                RemapLineNumsGOs(partOfLine.Substring(partOfLine.IndexOf("GOSUB") + 5).Trim)
+                If Not pl.Contains("GOSUB") Then Continue For
+                Dim nums = pl.Substring(pl.IndexOf("GOSUB") + 5).Trim
+                InsertNewLineLabelIntoColl(nums)
 
+                'refactoredLine &= pl.Replace(nums, " LINE" & nums) & ": "
             Next
+
+            'refactoredLine = refactoredLine.Trim.TrimEnd(":")
+
+
         Next
 
+        '--- GOTO'S, inset new LineLabel if needed
         For Each gline As String In _gotoLst
 
             Dim oo As SrcInfo = _sourceCodeColl.Item(gline)
             pCode = oo.item.ToUpper.Trim
 
-            Dim multilines() As String = pCode.Split(":")
-            For Each partOfLine As String In multilines
+            If pCode.StartsWith("REM", StringComparison.CurrentCultureIgnoreCase) Then
+                Continue For
+            End If
+
+            Dim multilines() As String = SplitIgnoringQuotes(pCode, ":")
+            For Each pl As String In multilines
 
                 Select Case True
-                    Case Not partOfLine.Contains("GOTO") AndAlso
-                             partOfLine.Contains("THEN") AndAlso
-                             partOfLine.Contains("IF")
-                        RemapLineNumsGOs(partOfLine.Substring(partOfLine.IndexOf("THEN") + 4).Trim)
+                    Case Not pl.Contains("GOTO") AndAlso
+                             pl.Contains("THEN") AndAlso
+                             pl.Contains("IF")
+                        InsertNewLineLabelIntoColl(pl.Substring(pl.IndexOf("THEN") + 4).Trim)
 
-                    Case partOfLine.Contains("GOTO")
-                        RemapLineNumsGOs(partOfLine.Substring(partOfLine.IndexOf("GOTO") + 4).Trim)
+                    Case pl.Contains("GOTO")
+                        InsertNewLineLabelIntoColl(pl.Substring(pl.IndexOf("GOTO") + 4).Trim)
 
                 End Select
 
             Next
         Next
 
-        WriteOutFile()
-
-        Try
-        Catch ex As Exception
-            Console.WriteLine("Program error - remapping lines")
-            Console.WriteLine(ex.ToString)
-            pERROR_CODE = -15
-            If Debugger.IsAttached Then Stop
-            Return False
-        End Try
-
-        Console.WriteLine("")
-        Return True
-
-
-    End Function
-
-    Private Sub RemapLineNumsGOs(lineOfCode As String)
+    End Sub
+    Private Sub InsertNewLineLabelIntoColl(LineNum2Find As String)
 
         '--- will detect and process ON GOTO / GOSUB
-        Dim multiGos() As String = lineOfCode.Split(",")
-        For Each lineNum As String In multiGos
+        Dim multiGos() As String = LineNum2Find.Split(",")
+        For Each ln As String In multiGos
 
-            If Not IsNumeric(lineNum) Then Continue For
+            If Not IsNumeric(ln) Then Continue For
 
-            If lineNum <> "" AndAlso _sourceCodeColl.Contains(lineNum) Then
+            If ln <> "" AndAlso _sourceCodeColl.Contains(ln) Then
+
                 '--- insert the new label
-                Dim labelName = "LINE" & lineNum & ":"
-                InsertIntoColection(lineNum, labelName)
+                InsertIntoColection(ln, "LINE" & ln & ":")
+
             End If
 
         Next
 
     End Sub
-
-    Private Sub WriteOutFile()
-
-        Dim fout = Path.ChangeExtension(_FileIn, "bl")
-        If IO.File.Exists(fout) Then
-            IO.File.Delete(fout)
-        End If
-
-
-        Dim outStr As New List(Of String)
-        For Each lines As SrcInfo In _sourceCodeColl
-
-            If pFLAG_linefeedUseLF Then
-                outStr.Add(lines.item.ReplaceLineEndings(vbLf))
-            Else
-                outStr.Add(lines.item.ReplaceLineEndings(vbCrLf))
-            End If
-
-        Next
-
-        IO.File.WriteAllLines(fout, outStr)
-
-
-    End Sub
-
-    Private Sub InsertIntoColection(BeforeThisKey As String, lineLBL As String)
+    Private Sub InsertIntoColection(BeforeThisKey As String, newline As String)
         Try
             Dim oo As New SrcInfo
-            oo.item = lineLBL
-            oo.key = lineLBL
-            _sourceCodeColl.Add(oo, lineLBL, BeforeThisKey)
+            oo.item = newline
+            oo.key = newline
+            _sourceCodeColl.Add(oo, newline, BeforeThisKey)
         Catch ex As Exception
             '--- LineLabel is already added so all is OK
         End Try
     End Sub
 
-
-    Private Sub UpdateColection(AfterThisKey As String, lineRec As SrcInfo)
-        'Try
-        '    Dim oo As New SrcInfo
-        '    oo.item = lineLBL
-        '    oo.key = lineLBL
-        '    _sourceCodeColl.Add(oo, lineLBL, BeforeThisKey)
-        'Catch ex As Exception
-        '    '--- LineLabel is already added so all is OK
-        'End Try
-    End Sub
 
     Private Function GetAllGotosGosubs() As Boolean
 
@@ -222,7 +300,6 @@ Public Class convert
         Dim ttl_found As Integer = 0
         Try
 
-            '--- 2nd pass
             For x = 1 To _sourceCodeColl.Count
 
                 Dim o As SrcInfo = _sourceCodeColl(x)
@@ -233,7 +310,7 @@ Public Class convert
                 '--- add to list
                 Dim tmp As String = pCode.ToUpper.Trim
 
-                Dim multilines() As String = tmp.Split(":")
+                Dim multilines() As String = SplitIgnoringQuotes(tmp, ":")
                 For Each partOfLine As String In multilines
 
                     If partOfLine.StartsWith("REM") Then Continue For
@@ -244,7 +321,7 @@ Public Class convert
                             ttl_found += 1
                         End If
                     End If
-                    If CheckGoto(partOfLine) Then
+                    If Check4Goto(partOfLine) Then
                         If _gotoLst.Contains(pLineNum) = False Then
                             _gotoLst.Add(pLineNum)
                             ttl_found += 1
@@ -267,7 +344,7 @@ Public Class convert
         Return True
     End Function
 
-    Private Function CheckGoto(tmp As String) As Boolean
+    Private Function Check4Goto(tmp As String) As Boolean
 
         If String.IsNullOrEmpty(tmp) Then Return False
 
@@ -279,7 +356,8 @@ Public Class convert
         End If
 
         '--- chec for valid missing goto (if q = 1 then 776)
-        If tmp.Contains("IF") AndAlso tmp.Contains("THEN") Then
+        If tmp.Contains("IF") AndAlso tmp.Contains("THEN") AndAlso
+            (Not tmp.Contains("GOSUB")) Then
 
             Dim thenpos As Integer = tmp.IndexOf("THEN") + 4
             Dim isline As String = GetLineNumFromStr(tmp.Substring(thenpos)).Trim
@@ -290,6 +368,7 @@ Public Class convert
         End If
 
         Return False
+
     End Function
 
     Private Function GetLineNumFromStr(s As String) As String
@@ -318,6 +397,18 @@ Public Class convert
 
     End Function
 
+    Private Sub WriteOutFile(outLstStr)
+
+        Dim fout = Path.ChangeExtension(_FileIn, "bl")
+        If IO.File.Exists(fout) Then
+            IO.File.Delete(fout)
+        End If
+
+        IO.File.WriteAllLines(fout, outLstStr)
+
+    End Sub
+
+
     Private Function ReadFile() As Boolean
 
         Try
@@ -330,7 +421,9 @@ Public Class convert
             '--- split line # from code
             For Each s As String In fileIn
                 pLineNum = "" : pCode = ""
+                '--- make line ending all the same just in case
                 s = s.Trim.ReplaceLineEndings()
+
                 If String.IsNullOrEmpty(s) Then
                     pLineNum = _blankLineCounterKey.ToString
                     _blankLineCounterKey = _blankLineCounterKey + 1
@@ -339,6 +432,7 @@ Public Class convert
                     '--- its a line #
                     pLineNum = GetLineNumFromStr(s)
                     pCode = s.Substring(pLineNum.Length).Trim
+                    CleanUpSyntex(pCode)
                 Else
                     pLineNum = _blankLineCounterKey.ToString
                     pCode = s.Trim
@@ -363,27 +457,26 @@ Public Class convert
 
     End Function
 
+    Private Sub CleanUpSyntex(ByRef pl As String)
+
+        If pl.Contains("IF", StringComparison.CurrentCultureIgnoreCase) AndAlso
+                pl.Contains("THEN", StringComparison.CurrentCultureIgnoreCase) AndAlso
+                pl.Contains("GOTO", StringComparison.CurrentCultureIgnoreCase) Then
+
+            If Not pl.Contains("THENON", StringComparison.CurrentCultureIgnoreCase) AndAlso
+                    Not pl.Contains("THEN ON", StringComparison.CurrentCultureIgnoreCase) Then
+
+                pl = ReplaceIgnoreQuotes(pl, "THENGOTO", "THEN ")
+                pl = ReplaceIgnoreQuotes(pl, "THEN GOTO", "THEN ")
+                pl = ReplaceIgnoreQuotes(pl, "THEN  GOTO", "THEN ")
+            End If
+        End If
+
+    End Sub
 
     Private Sub ProcessPETSCII()
         Throw New NotImplementedException()
     End Sub
-
-
-
-
-
-    'Private Function FormatCleanupLines() As Boolean
-
-    '    Dim tmp As String = code.ToUpper.Trim
-    '    If tmp.StartsWith("DATA") AndAlso Not tmp.StartsWith("DATA ") Then
-    '        '-- replace 'data' with 'data '
-    '    End If
-    '    If tmp.StartsWith("PRINT") AndAlso Not tmp.StartsWith("PRINT ") Then
-    '        '-- replace 'print' with 'print '
-    '    End If
-
-    'End Function
-
 
 
 
@@ -433,6 +526,17 @@ Public Class convert
             _FileIn = s
         Next
     End Function
+
+    Function ReplaceFirstOccurrence(input As String, search As String, replacement As String) As String
+        ' Create a Regex object with IgnoreCase option
+        Dim regex As New Regex(regex.Escape(search), RegexOptions.IgnoreCase)
+
+        ' Replace only the first occurrence
+        Return regex.Replace(input, replacement, 1)
+    End Function
+
+
+
 
     Private Class SrcInfo
         Public item As String

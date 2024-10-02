@@ -1,9 +1,15 @@
 Imports System
+Imports System.Security.Cryptography
 
 Module Program
     Sub Main(args As String())
 
         Console.WriteLine("Commander X16 BASIC Source converter")
+
+        Dim o1 As New convert2
+        o1.pFileIn = AppContext.BaseDirectory & "Test src code\test.bas"
+        o1.start()
+
         Dim o As New convert
 
         Dim tmp(1) As String

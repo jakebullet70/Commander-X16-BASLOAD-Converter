@@ -1,5 +1,9 @@
-2 rem midway campaign
-5 poke 53280,6:poke 53281, 1: print"help"
+1 rem midway campaign
+2 onggosub810,900
+3 IF 1=1 THENGOTO970
+5 IFZ5<=4THENONZ4GOTO900,950,960,970
+7 gosub810:gosub900
+8 poke 53280,6:poke 53281, 1: print"he:lp"
 10 REM ONZ4GOTO900,950,960,970
 13 print"{clr}{down}{down}{down}{down}{down}{down}{down}{down}{down}{blk}";tab(8);"{rvon}                       "
 20 dimf(5,7),c%(7,9),s%(9,9),w(5),n$(7),t$(5),c1(3),d$(4),p$(5)
@@ -14,11 +18,12 @@
 830 IFZ5<=4THENONZ4GOTO900,950,960,970
 900 print "line 900"
 950 print"line 950"
-960 print  "line 960"
+960 print  "line 960 gosub test"
 970 rem 970
 980 rem goto:3,140,830,984
 982 on f gosub 990,984
-984 print:ifa=1then 200: rem test rem
+984 print:ifa = 1Then 200
+985 goto990
 990 end
 
 
