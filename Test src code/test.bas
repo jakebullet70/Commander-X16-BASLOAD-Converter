@@ -1,5 +1,5 @@
 1 rem midway campaign
-2 onggosub810,900
+2 if e-1=6then970
 3 IF 1=1 THENGOTO970
 5 IFZ5<=4THENONZ4GOTO900,950,960,970
 7 gosub810:gosub900
@@ -13,6 +13,7 @@
 150 rem goto here 150
 200 rem gosub here 200
 210 poke 444444
+215 onggosub810,900
 220 gosub 810:ifj=1thenprint" {blu}{rvon}";n$(s%(i,9));
 810 print ""
 830 IFZ5<=4THENONZ4GOTO900,950,960,970
