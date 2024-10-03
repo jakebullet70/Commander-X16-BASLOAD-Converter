@@ -2,9 +2,29 @@
 
 Module modSupport
 
+
+    Public baseSQL As String = "
+            INSERT INTO 'src_data' 
+	          ('sort_num','orig_line','orig_line_num','is_goto','is_gosub',
+               'is_goto_then','is_on','is_rem') 
+	        VALUES 
+              (@sort_num,@orig_line,@orig_line_num,@is_goto,@is_gosub,
+               @is_goto_then,@is_on,@is_rem)"
+
+
+
+    Public Function IndexOfIgnoreCase(input As String, target As String) As Integer
+        ' Convert both input and target to lowercase for case-insensitive comparison
+        Dim inputLower As String = input.ToLower()
+        Dim targetLower As String = target.ToLower()
+
+        ' Use the built-in IndexOf on the lowercase strings
+        Return inputLower.IndexOf(targetLower)
+    End Function
+
     Function ReplaceFirstOccurrence(input As String, search As String, replacement As String) As String
         '--- Create a Regex object with IgnoreCase option
-        Dim regex As New Regex(regex.Escape(search), RegexOptions.IgnoreCase)
+        Dim regex As New Regex(Regex.Escape(search), RegexOptions.IgnoreCase)
 
         '--- Replace only the first occurrence
         Return regex.Replace(input, replacement, 1)
@@ -26,6 +46,41 @@ Module modSupport
         End If
 
     End Sub
+
+    Public Function ContainsIgnoreQuotes(input As String, target As String) As Boolean
+        Dim insideQuotes As Boolean = False
+        Dim i As Integer = 0
+        Dim targetLower As String = target.ToLower() ' Convert target to lowercase for comparison
+
+        While i < input.Length
+            Dim currentChar As Char = input(i)
+
+            ' Check for quotes
+            If currentChar = """"c Then
+                insideQuotes = Not insideQuotes
+                i += 1
+                Continue While
+            End If
+
+            ' If inside quotes, skip the characters
+            If insideQuotes Then
+                i += 1
+                Continue While
+            End If
+
+            ' If not inside quotes, check for the target string (case-insensitive)
+            If i <= input.Length - target.Length AndAlso
+           input.Substring(i, target.Length).ToLower() = targetLower Then
+                Return True ' Return true as soon as the target is found outside quotes
+            End If
+
+            i += 1
+        End While
+
+        ' If no match was found, return false
+        Return False
+    End Function
+
 
     Function GetLineNumFromStr(s As String) As String
 

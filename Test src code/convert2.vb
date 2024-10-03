@@ -1,6 +1,5 @@
-﻿Imports System.Globalization
-Imports System.Reflection.Emit
-Imports Microsoft.Data.Sqlite
+﻿Imports Microsoft.Data.Sqlite
+
 
 Public Class convert2
 
@@ -27,7 +26,14 @@ Public Class convert2
 
         ReadFileAndParse()
 
+        '--- ok, we now have the file in a table with attributes
+
+        InsertLineLabels(oDB)
+
+
     End Sub
+
+
 
     Private Function ReadFileAndParse() As Boolean
 
@@ -39,13 +45,6 @@ Public Class convert2
 
         Dim pCode = ""
         Dim sortNum As Integer = 1000
-        Dim baseSQL As String = "
-            INSERT INTO 'src_data' 
-	          ('sort_num','orig_line','orig_line_num','is_goto','is_gosub',
-               'is_goto_then','is_on','is_rem') 
-	        VALUES 
-              (@sort_num,@orig_line,@orig_line_num,@is_goto,@is_gosub,
-               @is_goto_then,@is_on,@is_rem)"
 
         '--- split line # from code
         For Each s As String In fileIn
@@ -65,7 +64,11 @@ Public Class convert2
                 '--- its a line #
                 Dim pLineNum = GetLineNumFromStr(s)
                 pCode = s.Substring(pLineNum.Length).Trim
+
+                '--- 1. removes 'IF THEN GOTO' to jsut 'IF THEN'
                 CleanUpSyntex(pCode)
+
+                insCmd.Parameters.Clear()
 
                 insCmd.Parameters.AddWithValue("@sort_num", sortNum)
                 insCmd.Parameters.AddWithValue("@orig_line", pCode)
@@ -94,29 +97,30 @@ Public Class convert2
     End Function
 
     Private Function isOnGotoGosub(pCode As String) As Boolean
+
         Dim multiparts() As String = SplitIgnoringQuotes(pCode, ":")
         For Each pl As String In multiparts
-            If pl.Contains("ON", StringComparison.CurrentCultureIgnoreCase) AndAlso
-               (pl.Contains("GOTO", StringComparison.CurrentCultureIgnoreCase) OrElse
-               pl.Contains("GOSUB", StringComparison.CurrentCultureIgnoreCase)) Then
-                'pl = ReplaceFirstOccurrence(pl, "ON", "ON ")
+            If isRemark(pl) Then Return False
+            If ContainsIgnoreQuotes(pl, "ON") AndAlso (ContainsIgnoreQuotes(pl, "GOTO") OrElse ContainsIgnoreQuotes(pl, "GOSUB")) Then
                 Return True
             End If
         Next
         Return False
+
     End Function
 
     Private Function isGotoThen(pCode As String) As Boolean
+
         Dim multiparts() As String = SplitIgnoringQuotes(pCode, ":")
         For Each pl As String In multiparts
 
-            If pl.Contains("GOTO", StringComparison.CurrentCultureIgnoreCase) Then
+            If isRemark(pl) Then Return False
+            If ContainsIgnoreQuotes(pl, "GOTO") Then
                 Return True
             End If
 
-            If pl.Contains("IF", StringComparison.CurrentCultureIgnoreCase) AndAlso
-                pl.Contains("THEN", StringComparison.CurrentCultureIgnoreCase) AndAlso
-                (Not pl.Contains("GOSUB")) Then
+            If ContainsIgnoreQuotes(pl, "IF") AndAlso ContainsIgnoreQuotes(pl, "THEN") AndAlso
+                (Not ContainsIgnoreQuotes(pl, "GOSUB")) Then
 
                 '--- now see if there is a line number
                 '--- is this line like 'if a then 6711'
@@ -136,7 +140,8 @@ Public Class convert2
 
         Dim multiparts() As String = SplitIgnoringQuotes(pCode, ":")
         For Each pl As String In multiparts
-            If pl.Contains("GOSUB", StringComparison.CurrentCultureIgnoreCase) Then
+            If isRemark(pl) Then Return False
+            If ContainsIgnoreQuotes(pl, "GOSUB") Then
                 Return True
             End If
         Next
@@ -148,12 +153,13 @@ Public Class convert2
 
         Dim multiparts() As String = SplitIgnoringQuotes(pCode, ":")
         For Each pl As String In multiparts
-            If pl.Contains("GOTO", StringComparison.CurrentCultureIgnoreCase) Then
+            If isRemark(pl) Then Return False
+            If ContainsIgnoreQuotes(pl, "GOTO") Then
                 Return True
             End If
         Next
-
         Return False
+
     End Function
 
 End Class
