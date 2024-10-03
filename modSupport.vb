@@ -1,8 +1,10 @@
-﻿Imports System.Text.RegularExpressions
+﻿Imports System.Runtime.InteropServices.JavaScript.JSType
+Imports System.Text.RegularExpressions
+Imports Microsoft.Data.Sqlite
 
 Module modSupport
 
-
+    Public oDB As New SqliteConnection
     Public baseSQL As String = "
             INSERT INTO 'src_data' 
 	          ('sort_num','orig_line','orig_line_num','is_goto','is_gosub',
@@ -11,7 +13,19 @@ Module modSupport
               (@sort_num,@orig_line,@orig_line_num,@is_goto,@is_gosub,
                @is_goto_then,@is_on,@is_rem)"
 
+    Public Function UpdateCodeLine(pcode As String, orig_line_num As Integer) As Boolean
 
+        Dim insCmd As SqliteCommand = oDB.CreateCommand()
+        insCmd.CommandText = "UPDATE src_data SET orig_line = @code WHERE orig_line_num = @line"
+
+        insCmd.Parameters.AddWithValue("@line", orig_line_num)
+        insCmd.Parameters.AddWithValue("@code", pcode)
+        Dim rowsAffected As Integer = insCmd.ExecuteNonQuery()
+
+        If rowsAffected = -1 Then Return False
+        Return True
+
+    End Function
 
     Public Function IndexOfIgnoreCase(input As String, target As String) As Integer
         ' Convert both input and target to lowercase for case-insensitive comparison

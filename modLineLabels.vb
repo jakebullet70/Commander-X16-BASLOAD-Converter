@@ -3,15 +3,11 @@ Imports System.Data
 
 Module modLineLabels
 
-    Private oDB As New SqliteConnection
-
     '--- a list of every line that needs a label
     Private targetLblLst As New Collection
 
 
-    Public Function InsertLineLabels(oDBConnection As SqliteConnection) As Boolean
-
-        oDB = oDBConnection
+    Public Function InsertLineLabels() As Boolean
 
         Console.WriteLine("Pass 2")
         Dim cmd As SqliteCommand = oDB.CreateCommand()
@@ -34,67 +30,75 @@ Module modLineLabels
 
 
     Private Sub ParseLine4Label(Reader As SqliteDataReader)
+
         While Reader.Read()
 
             Dim pcode As String = Reader("orig_line").ToString()
             Dim orig_line_num As Integer = Reader("orig_line_num")
 
-            Dim multiparts() As String = SplitIgnoringQuotes(pCode, ":")
+            Dim multiparts() As String = SplitIgnoringQuotes(pcode, ":")
+            Dim fullLine As String = ""
+
             For Each pl As String In multiparts
 
-                '--- do ON one's 1st
-                If ContainsIgnoreQuotes(pl, "ON") AndAlso ContainsIgnoreQuotes(pl, "GOSUB") Then
-                    ParseONline(pl, "GOSUB", orig_line_num)
-                    Continue For
-                End If
-                If ContainsIgnoreQuotes(pl, "ON") AndAlso ContainsIgnoreQuotes(pl, "GOTO") Then
-                    ParseONline(pl, "GOTO", orig_line_num)
-                    Continue For
-                End If
+                Select Case True
+                    Case ContainsIgnoreQuotes(pl, "ON") AndAlso ContainsIgnoreQuotes(pl, "GOSUB")
+                        ParseONline(pl, "GOSUB")
 
-                If ContainsIgnoreQuotes(pl, "GOTO") Then
-                    Dim thenpos As Integer = IndexOfIgnoreCase(pl, "GOTO") + 4
-                    Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
-                    If isline <> "" Then
-                        InsertNewLabel(isline, GetSortNum4LineNum(isline))
-                    End If
-                    Continue For
-                End If
+                    Case ContainsIgnoreQuotes(pl, "ON") AndAlso ContainsIgnoreQuotes(pl, "GOTO")
+                        ParseONline(pl, "GOTO")
 
-                If ContainsIgnoreQuotes(pl, "GOSUB") Then
-                    Dim thenpos As Integer = IndexOfIgnoreCase(pl, "GOSUB") + 5
-                    Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
-                    If isline <> "" Then
-                        InsertNewLabel(isline, GetSortNum4LineNum(isline))
-                    End If
-                    Continue For
-                End If
+                    Case ContainsIgnoreQuotes(pl, "GOTO")
+                        Dim thenpos As Integer = IndexOfIgnoreCase(pl, "GOTO") + 4
+                        Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
+                        If isline <> "" Then
+                            InsertNewLabel(isline, GetSortNum4LineNum(isline))
+                            pl = pl.Replace(isline, " LINE" & isline)
+                        End If
 
-                If ContainsIgnoreQuotes(pl, "IF") AndAlso ContainsIgnoreQuotes(pl, "THEN") AndAlso Not ContainsIgnoreQuotes(pl, "GOSUB") Then
-                    '--- IF THEN's with no GOTO key word so normal
-                    Dim thenpos As Integer = IndexOfIgnoreCase(pl, "THEN") + 4
-                    Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
-                    If isline <> "" Then
-                        InsertNewLabel(isline, GetSortNum4LineNum(isline))
-                    End If
-                    Continue For
-                End If
+                    Case ContainsIgnoreQuotes(pl, "GOSUB")
+                        Dim thenpos As Integer = IndexOfIgnoreCase(pl, "GOSUB") + 5
+                        Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
+                        If isline <> "" Then
+                            InsertNewLabel(isline, GetSortNum4LineNum(isline))
+                            pl = pl.Replace(isline, " LINE" & isline)
+                        End If
 
+                    Case ContainsIgnoreQuotes(pl, "IF") AndAlso ContainsIgnoreQuotes(pl, "THEN") AndAlso Not ContainsIgnoreQuotes(pl, "GOSUB")
+                        '--- IF THEN's with no GOTO key word so normal
+                        Dim thenpos As Integer = IndexOfIgnoreCase(pl, "THEN") + 4
+                        Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
+                        If isline <> "" Then
+                            InsertNewLabel(isline, GetSortNum4LineNum(isline))
+                            pl = pl.Replace(isline, " LINE" & isline)
+                        End If
+
+                End Select
+
+                '--- rebuld the line with the new line labels
+                fullLine &= pl & ":"
             Next
 
+            fullLine = fullLine.TrimEnd(":")
+            UpdateCodeLine(fullLine, orig_line_num) '--- update the table
 
         End While
     End Sub
 
-    Private Sub ParseONline(pCode As String, sType As String, orig_line_num As Integer)
+    Private Sub ParseONline(ByRef pCode As String, ByVal sType As String)
 
         Dim strNums = pCode.Substring(IndexOfIgnoreCase(pCode, sType) + sType.Length) '--- get just the numbers
+        Dim labeledLine = ""
         Dim multiparts() As String = strNums.Split(",")
         For Each pl As String In multiparts
             If IsNumeric(pl.Trim) Then
                 InsertNewLabel(pl.Trim, GetSortNum4LineNum(pl.Trim))
+                labeledLine &= "LINE" & pl & ","
             End If
         Next
+
+        '--- new line segment with line labels
+        pCode = pCode.Replace(strNums, " " & labeledLine).TrimEnd(",")
 
     End Sub
 
@@ -132,15 +136,14 @@ Module modLineLabels
             insCmd.Parameters.AddWithValue("@is_on", 0)
             insCmd.Parameters.AddWithValue("@is_rem", 0)
             Dim rowsAffected As Integer = insCmd.ExecuteNonQuery()
-            Dim a = 0
 
         Catch ex As Exception
             If ex.Message.StartsWith("Add failed. Duplicate") Then
-                Console.WriteLine("Dupe label: " & num)
+                'Console.WriteLine("Dupe label: " & num)
             Else
                 Throw
             End If
-            'Console.WriteLine("Dupe label: " & num)
+
         End Try
 
 

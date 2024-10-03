@@ -3,7 +3,7 @@
 
 Public Class convert2
 
-    Private oDB As New SqliteConnection
+
 
     Public pERROR_CODE As Integer = 0
 
@@ -28,7 +28,7 @@ Public Class convert2
 
         '--- ok, we now have the file in a table with attributes
 
-        InsertLineLabels(oDB)
+        InsertLineLabels()
 
 
     End Sub
