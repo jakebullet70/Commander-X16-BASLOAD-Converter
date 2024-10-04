@@ -8,6 +8,8 @@ Module modSupport
     Public pFLAG_createLstFile As Boolean = True
     Public pFLAG_petcat As Boolean = False
     Public pFLAG_uCaseKeyWord As Boolean = True
+    Public pFLAG_tabOut4 As Boolean = True
+    Public pFLAG_tabOut3 As Boolean = False
 
 
     Public pERROR_CODE As Integer = 0

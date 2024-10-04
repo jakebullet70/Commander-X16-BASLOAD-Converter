@@ -1,7 +1,10 @@
-﻿Imports Microsoft.Data.Sqlite
+﻿Imports System.CodeDom.Compiler
+Imports Microsoft.Data.Sqlite
 
 Module modFormat_Write
     Private OutStr As New List(Of String)
+    Private Indented = ""
+
     Enum SpacesType
         BEGINNING
         [END]
@@ -11,7 +14,7 @@ Module modFormat_Write
     Private arrKeyWordsMain() = {"FOR", "IF", "THEN", "DIM", "PRINT", "CONT",
         "READ", "END", "ON", "GOSUB", "GOTO", "NEXT", "THEN", "AND", "OR",
         "DEF FN", "DEFFN", "COLOR", "RUN", "INPUT", "STEP", "RESTORE", "RETURN",
-        "STOP", "SYS", "WAIT", "CMD"}
+        "STOP", "SYS", "WAIT", "CMD", "CLS"}
     'Private arrKeyWordsAlso() = {"NEXT", "THEN", "="}
     Private arrKeyWordsFunct() = {"ASC", "CHR", "ABS", "ATN", "FRE", "COS", "EXP",
         "HEX", "INT(", "LEFT", "RIGHT", "MID", "RND", "SQR", "TAB", "TAN",
@@ -22,6 +25,8 @@ Module modFormat_Write
 
     Function CleanUpAndWriteOut() As Boolean
 
+        If pFLAG_tabOut4 Then Indented = "    "
+        If pFLAG_tabOut3 Then Indented = "   "
 
         Console.WriteLine("Pass 3")
         Dim cmd As SqliteCommand = oDB.CreateCommand()
@@ -40,7 +45,6 @@ Module modFormat_Write
         Return True
 
     End Function
-
 
     Private Sub FormatAndWrite(Reader As SqliteDataReader)
 
@@ -61,11 +65,11 @@ Module modFormat_Write
                 outStr.Add(pcode) : Continue While
             End If
             If pcode.StartsWith("REM", StringComparison.CurrentCultureIgnoreCase) Then
-                outStr.Add(pcode) : Continue While
+                OutStr.Add(Indented & pcode) : Continue While
             End If
             If pcode.StartsWith("DATA", StringComparison.CurrentCultureIgnoreCase) Then
                 AddSpacesIfNeeded(pcode, "DATA", SpacesType.END)
-                outStr.Add(pcode) : Continue While
+                OutStr.Add(Indented & pcode) : Continue While
             End If
 
             '--- now lets break apart the line with ':'
@@ -89,7 +93,10 @@ Module modFormat_Write
                     AddSpacesIfNeeded(pl, " f or ", SpacesType.BOTH, "for")
                     AddSpacesIfNeeded(pl, "TO", SpacesType.BOTH)
                 End If
-
+                If ContainsIgnoreQuotes(pl, "res to re") Then
+                    '--- 'restore' gets confused
+                    AddSpacesIfNeeded(pl, "res to re", SpacesType.BOTH, "restore")
+                End If
                 For Each kw In arrKeyWordsSpec1
                     '--- {"<=", ">=", "="} ==> clean up
                     If ContainsIgnoreQuotes(pl, kw) Then
@@ -108,7 +115,7 @@ Module modFormat_Write
             Next
 
             Dim cleanLine = fullLine.Trim.TrimEnd(":")
-            outStr.Add(cleanLine)
+            OutStr.Add(Indented & cleanLine)
             lineNum += 1
 
 

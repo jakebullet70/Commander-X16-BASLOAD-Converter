@@ -4,7 +4,7 @@ Module Program
         Console.WriteLine("Commander X16 BASIC Source converter")
 
         Dim o1 As New convert
-        pFileIn = AppContext.BaseDirectory & "Test src code\test.bas"
+        pFileIn = AppContext.BaseDirectory & "Test src code\midwayDOS.bas"
         pFLAG_petcat = False
         pFLAG_linefeedUseLF = False
         pFLAG_createLstFile = False
