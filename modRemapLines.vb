@@ -53,7 +53,7 @@ Module modRemapLines
                         Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
                         If isline <> "" Then
                             InsertNewLabel(isline, GetSortNum4LineNum(isline))
-                            pl = pl.Replace(isline, " LINE" & isline)
+                            pl = pl.Replace(isline, "LINE" & isline)
                         End If
 
                     Case ContainsIgnoreQuotes(pl, "GOSUB")
@@ -61,7 +61,7 @@ Module modRemapLines
                         Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
                         If isline <> "" Then
                             InsertNewLabel(isline, GetSortNum4LineNum(isline))
-                            pl = pl.Replace(isline, " LINE" & isline)
+                            pl = pl.Replace(isline, "LINE" & isline)
                         End If
 
                     Case ContainsIgnoreQuotes(pl, "IF") AndAlso ContainsIgnoreQuotes(pl, "THEN") AndAlso Not ContainsIgnoreQuotes(pl, "GOSUB")
@@ -70,7 +70,7 @@ Module modRemapLines
                         Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
                         If isline <> "" Then
                             InsertNewLabel(isline, GetSortNum4LineNum(isline))
-                            pl = pl.Replace(isline, " LINE" & isline)
+                            pl = pl.Replace(isline, "LINE" & isline)
                         End If
 
                 End Select

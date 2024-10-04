@@ -7,13 +7,22 @@ Public Class convert
 
     Public Sub Start()
 
-        'AppContext.BaseDirectory & "Test src code\test.bas"
-        oDB.ConnectionString = "Data Source=" & AppContext.BaseDirectory & "conversion.db3"
-        oDB.Open()
+        Const USE_DB_IN_MEM As Boolean = True
 
-        Dim ssql As SqliteCommand = oDB.CreateCommand()
-        ssql.CommandText = "DELETE FROM 'src_data';"
-        ssql.ExecuteNonQuery()
+        If USE_DB_IN_MEM Then
+            oDB.ConnectionString = "Data Source=:memory:"
+            oDB.Open()
+            CreateTable()
+        Else
+            'AppContext.BaseDirectory & "Test src code\test.bas"
+            oDB.ConnectionString = "Data Source=" & AppContext.BaseDirectory & "conversion.db3"
+            oDB.Open()
+            Dim ssql As SqliteCommand = oDB.CreateCommand()
+            ssql.CommandText = "DELETE FROM 'src_data';"
+            ssql.ExecuteNonQuery()
+        End If
+
+
 
         '--- get the file into a table
         ReadFileAndParse()
@@ -158,5 +167,22 @@ Public Class convert
 
     End Function
 
+
+    Private Sub CreateTable()
+
+        Dim createTableCommand As SqliteCommand = oDB.CreateCommand()
+        createTableCommand.CommandText = "
+                 CREATE TABLE src_data (
+	                sort_num	INTEGER,
+                    orig_line	TEXT,
+	                orig_line_num	INTEGER,
+	                is_goto     INTEGER,
+	                is_gosub	INTEGER,
+	                is_goto_then	INTEGER,
+                    is_on	INTEGER,
+                    is_rem	INTEGER)"
+        createTableCommand.ExecuteNonQuery()
+
+    End Sub
 
 End Class

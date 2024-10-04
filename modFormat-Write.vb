@@ -14,14 +14,15 @@ Module modFormat_Write
     Private arrKeyWordsMain() = {"FOR", "IF", "THEN", "DIM", "PRINT", "CONT",
         "READ", "END", "ON", "GOSUB", "GOTO", "NEXT", "THEN", "AND", "OR",
         "DEF FN", "DEFFN", "COLOR", "RUN", "INPUT", "STEP", "RESTORE", "RETURN",
-        "STOP", "SYS", "WAIT", "CMD", "CLS"}
-    'Private arrKeyWordsAlso() = {"NEXT", "THEN", "="}
+        "STOP", "SYS", "WAIT", "CMD", "CLS", "INPUT"}
+
     Private arrKeyWordsFunct() = {"ASC", "CHR", "ABS", "ATN", "FRE", "COS", "EXP",
         "HEX", "INT(", "LEFT", "RIGHT", "MID", "RND", "SQR", "TAB", "TAN",
         "SPC", "SGN", "USR", "VAL"}
-    Private arrKeyWordsSpec1() = {"<=", ">=", "="}
 
-    '--- special stuff "TOvGOTO","INPUT
+    Private arrKeyWordsSpec1() = {"<=", ">=", "=", "<", ">", "*"}
+
+    '--- special stuff "INPUT
 
     Function CleanUpAndWriteOut() As Boolean
 
@@ -96,6 +97,10 @@ Module modFormat_Write
                 If ContainsIgnoreQuotes(pl, "res to re") Then
                     '--- 'restore' gets confused
                     AddSpacesIfNeeded(pl, "res to re", SpacesType.BOTH, "restore")
+                End If
+                If ContainsIgnoreQuotes(pl, "input #") Then
+                    '--- 'input vs input#' gets confused
+                    AddSpacesIfNeeded(pl, "input#", SpacesType.BOTH, "restore")
                 End If
                 For Each kw In arrKeyWordsSpec1
                     '--- {"<=", ">=", "="} ==> clean up
