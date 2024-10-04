@@ -1,7 +1,7 @@
 ﻿Imports Microsoft.Data.Sqlite
 Imports System.Data
 
-Module modLineLabels
+Module modRemapLines
 
     '--- a list of every line that needs a label
     Private targetLblLst As New Collection
@@ -19,7 +19,7 @@ Module modLineLabels
 
         '--- parse lines and add target line # to list
         Using reader As SqliteDataReader = cmd.ExecuteReader()
-            ParseLine4Label(reader)
+            RemapLabelNums(reader)
         End Using
 
 
@@ -29,7 +29,7 @@ Module modLineLabels
 
 
 
-    Private Sub ParseLine4Label(Reader As SqliteDataReader)
+    Private Sub RemapLabelNums(Reader As SqliteDataReader)
 
         While Reader.Read()
 
@@ -145,7 +145,6 @@ Module modLineLabels
             End If
 
         End Try
-
 
     End Sub
 

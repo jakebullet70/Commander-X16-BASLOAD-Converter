@@ -1,8 +1,19 @@
-﻿Imports System.Runtime.InteropServices.JavaScript.JSType
-Imports System.Text.RegularExpressions
+﻿Imports System.IO
+'Imports System.Text.RegularExpressions
 Imports Microsoft.Data.Sqlite
 
 Module modSupport
+
+    Public pFLAG_linefeedUseLF As Boolean = False
+    Public pFLAG_createLstFile As Boolean = True
+    Public pFLAG_petcat As Boolean = False
+    Public pFLAG_uCaseKeyWord As Boolean = True
+
+
+    Public pERROR_CODE As Integer = 0
+
+    Public pFileIn As String = ""
+
 
     Public oDB As New SqliteConnection
     Public baseSQL As String = "
@@ -36,13 +47,13 @@ Module modSupport
         Return inputLower.IndexOf(targetLower)
     End Function
 
-    Function ReplaceFirstOccurrence(input As String, search As String, replacement As String) As String
-        '--- Create a Regex object with IgnoreCase option
-        Dim regex As New Regex(Regex.Escape(search), RegexOptions.IgnoreCase)
+    'Function ReplaceFirstOccurrence(input As String, search As String, replacement As String) As String
+    '    '--- Create a Regex object with IgnoreCase option
+    '    Dim regex As New Regex(Regex.Escape(search), RegexOptions.IgnoreCase)
 
-        '--- Replace only the first occurrence
-        Return regex.Replace(input, replacement, 1)
-    End Function
+    '    '--- Replace only the first occurrence
+    '    Return regex.Replace(input, replacement, 1)
+    'End Function
 
     Sub CleanUpSyntex(ByRef pl As String)
 
@@ -96,15 +107,13 @@ Module modSupport
     End Function
 
 
-    Function GetLineNumFromStr(s As String) As String
+    Function GetLineNumFromStr(ByVal s As String) As String
 
         s = s.TrimStart
 
-
         Dim ret As String = ""
-        Dim spart As String = ""
         For x = 0 To s.Length - 1
-            spart = s.Substring(x, 1)
+            Dim spart As String = s.Substring(x, 1)
             If IsNumeric(spart) Then
                 ret &= spart
             Else
@@ -142,13 +151,15 @@ Module modSupport
 
             ' If not inside quotes, check for the oldValue (case-insensitive)
             If i <= input.Length - oldValue.Length AndAlso
-           input.Substring(i, oldValue.Length).ToLower() = oldValueLower Then
+                    input.Substring(i, oldValue.Length).ToLower() = oldValueLower Then
+
                 result.Append(newValue) ' Append the replacement value
                 i += oldValue.Length
             Else
                 result.Append(currentChar) ' Append the original character
                 i += 1
             End If
+
         End While
 
         Return result.ToString()
@@ -156,34 +167,34 @@ Module modSupport
 
 
 
-    Public Sub AddWithSpaceIfNeededIsStart(ByRef line As String, findMe As String, Optional UcaseIt As Boolean = False)
+    'Public Sub AddWithSpaceIfNeededIsStart(ByRef line As String, findMe As String, Optional UcaseIt As Boolean = False)
 
-        '--- uses BYREF to adjust line value
-        If line.StartsWith(findMe, StringComparison.CurrentCultureIgnoreCase) Then
-            AddWithSpaceIfNeeded(line, findMe,, UcaseIt)
-        End If
+    '    '--- uses BYREF to adjust line value
+    '    If line.StartsWith(findMe, StringComparison.CurrentCultureIgnoreCase) Then
+    '        AddWithSpaceIfNeeded(line, findMe,, UcaseIt)
+    '    End If
 
-    End Sub
+    'End Sub
 
-    Public Sub AddWithSpaceIfNeeded(ByRef line As String, findMe As String,
-                                    Optional addPrefixSpace As Boolean = False, Optional UcaseIt As Boolean = False)
+    'Public Sub AddWithSpaceIfNeeded(ByRef line As String, findMe As String,
+    '                                Optional addPrefixSpace As Boolean = False, Optional UcaseIt As Boolean = False)
 
-        '--- uses BYREF to adjust line value
-        If line.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) AndAlso
-           Not line.Contains(findMe & " ", StringComparison.CurrentCultureIgnoreCase) Then
-            line = line.Replace(findMe,
-                    IIf(addPrefixSpace, " ", "") & findMe & " ",
-                    StringComparison.CurrentCultureIgnoreCase)
-
-
-        End If
-
-        If UcaseIt AndAlso findMe.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) AndAlso line.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) Then
-            line = ReplaceIgnoreQuotes(line, findMe, findMe.ToUpper)
-        End If
+    '    '--- uses BYREF to adjust line value
+    '    If line.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) AndAlso
+    '       Not line.Contains(findMe & " ", StringComparison.CurrentCultureIgnoreCase) Then
+    '        line = line.Replace(findMe,
+    '                IIf(addPrefixSpace, " ", "") & findMe & " ",
+    '                StringComparison.CurrentCultureIgnoreCase)
 
 
-    End Sub
+    '    End If
+
+    '    If UcaseIt AndAlso findMe.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) AndAlso line.Contains(findMe, StringComparison.CurrentCultureIgnoreCase) Then
+    '        line = ReplaceIgnoreQuotes(line, findMe, findMe.ToUpper)
+    '    End If
+
+
+    'End Sub
 
     Public Function SplitIgnoringQuotes(input As String, delimiter As Char) As String()
         Dim result As New List(Of String)()
@@ -216,5 +227,14 @@ Module modSupport
         Return result.ToArray()
     End Function
 
+    Sub WriteOutFile(outLstStr As List(Of String))
 
+        Dim fout = Path.ChangeExtension(pFileIn, "bl")
+        If IO.File.Exists(fout) Then
+            IO.File.Delete(fout)
+        End If
+
+        IO.File.WriteAllLines(fout, outLstStr)
+
+    End Sub
 End Module

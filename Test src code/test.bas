@@ -1,5 +1,6 @@
 100 rem midway campaign
 200 if e-1=6then970
+210 aa$=asc("g") : ff = chr$("l")
 300 IF 1=1 THENGOTO970
 500 IFZ5<=4THENONZ4GOTO900,950,960,970
 710 gosub810:gosub900
@@ -19,6 +20,8 @@
 970 rem 970
 980 rem goto:3,140,830,984
 990 end
+993 DD=ASC(CHR$("77"))
+995 IF TT=1 THEN FOR X=1TO50:PRINT"HHHHH": Next
 999 goto100
 
 

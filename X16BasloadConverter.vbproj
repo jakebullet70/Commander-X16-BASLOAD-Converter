@@ -5,6 +5,7 @@
     <RootNamespace>X16BasloadConverter</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <Copyright>sadLogic</Copyright>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

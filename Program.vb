@@ -1,33 +1,17 @@
-Imports System
-Imports System.Security.Cryptography
-
 Module Program
     Sub Main(args As String())
 
         Console.WriteLine("Commander X16 BASIC Source converter")
 
-        Dim o1 As New convert2
-        o1.pFileIn = AppContext.BaseDirectory & "Test src code\test.bas"
+        Dim o1 As New convert
+        pFileIn = AppContext.BaseDirectory & "Test src code\test.bas"
+        pFLAG_petcat = False
+        pFLAG_linefeedUseLF = False
+        pFLAG_createLstFile = False
+        pFLAG_uCaseKeyWord = True
         o1.start()
 
-        Dim o As New convert
-
-        Dim tmp(1) As String
-        tmp(0) = "--petcat"
-        tmp(1) = AppContext.BaseDirectory & "Test src code\test.bas"
-
-
-        If o.Start(tmp) = False Then
-            'If o.Start(args) = False Then
-            If o.pERROR_CODE = -11 Then
-                Console.WriteLine("error line:" & o.pLineNum)
-            End If
-            o.ShowHelp()
-        Else
-            Console.WriteLine("All done!")
-        End If
-
-        Console.WriteLine("")
+        Console.WriteLine("") : Console.WriteLine("All done!") : Console.WriteLine("")
         Console.ReadKey()
         End
 
