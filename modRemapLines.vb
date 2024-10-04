@@ -42,13 +42,13 @@ Module modRemapLines
             For Each pl As String In multiparts
 
                 Select Case True
-                    Case ContainsIgnoreQuotes(pl, "ON") AndAlso ContainsIgnoreQuotes(pl, "GOSUB")
+                    Case ContainsIgnoreQuotesIgnoreCase(pl, "ON") AndAlso ContainsIgnoreQuotesIgnoreCase(pl, "GOSUB")
                         ParseONline(pl, "GOSUB")
 
-                    Case ContainsIgnoreQuotes(pl, "ON") AndAlso ContainsIgnoreQuotes(pl, "GOTO")
+                    Case ContainsIgnoreQuotesIgnoreCase(pl, "ON") AndAlso ContainsIgnoreQuotesIgnoreCase(pl, "GOTO")
                         ParseONline(pl, "GOTO")
 
-                    Case ContainsIgnoreQuotes(pl, "GOTO")
+                    Case ContainsIgnoreQuotesIgnoreCase(pl, "GOTO")
                         Dim thenpos As Integer = IndexOfIgnoreCase(pl, "GOTO") + 4
                         Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
                         If isline <> "" Then
@@ -56,7 +56,7 @@ Module modRemapLines
                             pl = pl.Replace(isline, "LINE" & isline)
                         End If
 
-                    Case ContainsIgnoreQuotes(pl, "GOSUB")
+                    Case ContainsIgnoreQuotesIgnoreCase(pl, "GOSUB")
                         Dim thenpos As Integer = IndexOfIgnoreCase(pl, "GOSUB") + 5
                         Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim
                         If isline <> "" Then
@@ -64,7 +64,7 @@ Module modRemapLines
                             pl = pl.Replace(isline, "LINE" & isline)
                         End If
 
-                    Case ContainsIgnoreQuotes(pl, "IF") AndAlso ContainsIgnoreQuotes(pl, "THEN") AndAlso Not ContainsIgnoreQuotes(pl, "GOSUB")
+                    Case ContainsIgnoreQuotesIgnoreCase(pl, "IF") AndAlso ContainsIgnoreQuotesIgnoreCase(pl, "THEN") AndAlso Not ContainsIgnoreQuotesIgnoreCase(pl, "GOSUB")
                         '--- IF THEN's with no GOTO key word so normal
                         Dim thenpos As Integer = IndexOfIgnoreCase(pl, "THEN") + 4
                         Dim isline As String = GetLineNumFromStr(pl.Substring(thenpos)).Trim

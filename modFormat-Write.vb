@@ -20,7 +20,7 @@ Module modFormat_Write
         "HEX", "INT(", "LEFT", "RIGHT", "MID", "RND", "SQR", "TAB", "TAN",
         "SPC", "SGN", "USR", "VAL"}
 
-    Private arrKeyWordsSpec1() = {"<=", ">=", "=", "<", ">", "*"}
+    'Private arrKeyWordsSpec1() = {"<=", ">=", "=", "<>", ">", "<"}
 
     '--- special stuff "INPUT
 
@@ -89,26 +89,27 @@ Module modFormat_Write
 
 
                 '--- special case fubar
-                If ContainsIgnoreQuotes(pl, " f or ") Then
+                If ContainsIgnoreQuotesIgnoreCase(pl, " f or ") Then
                     '--- 'for' and 'or' get confused
                     AddSpacesIfNeeded(pl, " f or ", SpacesType.BOTH, "for")
                     AddSpacesIfNeeded(pl, "TO", SpacesType.BOTH)
                 End If
-                If ContainsIgnoreQuotes(pl, "res to re") Then
+
+                If ContainsIgnoreQuotesIgnoreCase(pl, "rest or e") Then
                     '--- 'restore' gets confused
-                    AddSpacesIfNeeded(pl, "res to re", SpacesType.BOTH, "restore")
+                    AddSpacesIfNeeded(pl, "rest or e", SpacesType.BOTH, "restore")
                 End If
-                If ContainsIgnoreQuotes(pl, "input #") Then
+                If ContainsIgnoreQuotesIgnoreCase(pl, "input #") Then
                     '--- 'input vs input#' gets confused
                     AddSpacesIfNeeded(pl, "input#", SpacesType.BOTH, "restore")
                 End If
-                For Each kw In arrKeyWordsSpec1
-                    '--- {"<=", ">=", "="} ==> clean up
-                    If ContainsIgnoreQuotes(pl, kw) Then
-                        AddSpacesIfNeeded(pl, kw, SpacesType.BOTH)
-                        Exit For
-                    End If
-                Next
+                'For Each kw In arrKeyWordsSpec1
+                '    '--- {"<=", ">=", "="} ==> clean up
+                '    If ContainsIgnoreQuotesIngnoreCase(pl, kw) Then
+                '        AddSpacesIfNeeded(pl, kw, SpacesType.BOTH)
+                '        Exit For
+                '    End If
+                'Next
                 '--- end special case fubar
 
 
@@ -138,20 +139,20 @@ Module modFormat_Write
         '--- uses BYREF to adjust line value
 
         If replaceWithMe = "" Then replaceWithMe = findMe
-        If ContainsIgnoreQuotes(line, findMe) Then
+        If ContainsIgnoreQuotesIgnoreCase(line, findMe) Then
 
             '--- strip starting and trailing spaces
-            line = ReplaceIgnoreQuotes(line, " " & findMe, replaceWithMe)
-            line = ReplaceIgnoreQuotes(line, findMe & " ", replaceWithMe)
+            line = ReplaceIgnoreQuotesIgnoreCase(line, " " & findMe, replaceWithMe)
+            line = ReplaceIgnoreQuotesIgnoreCase(line, findMe & " ", replaceWithMe)
 
 
             Select Case AddSpaces
                 Case SpacesType.BOTH
-                    line = ReplaceIgnoreQuotes(line, findMe, " " & IIf(pFLAG_uCaseKeyWord, replaceWithMe.ToUpper, replaceWithMe) & " ")
+                    line = ReplaceIgnoreQuotesIgnoreCase(line, findMe, " " & IIf(pFLAG_uCaseKeyWord, replaceWithMe.ToUpper, replaceWithMe) & " ")
                 Case SpacesType.END
-                    line = ReplaceIgnoreQuotes(line, findMe, IIf(pFLAG_uCaseKeyWord, replaceWithMe.ToUpper, replaceWithMe) & " ")
+                    line = ReplaceIgnoreQuotesIgnoreCase(line, findMe, IIf(pFLAG_uCaseKeyWord, replaceWithMe.ToUpper, replaceWithMe) & " ")
                 Case SpacesType.BEGINNING
-                    line = ReplaceIgnoreQuotes(line, findMe, " " & IIf(pFLAG_uCaseKeyWord, replaceWithMe.ToUpper, replaceWithMe))
+                    line = ReplaceIgnoreQuotesIgnoreCase(line, findMe, " " & IIf(pFLAG_uCaseKeyWord, replaceWithMe.ToUpper, replaceWithMe))
             End Select
 
         End If

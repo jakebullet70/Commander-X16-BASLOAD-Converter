@@ -106,7 +106,7 @@ Public Class convert
         Dim multiparts() As String = SplitIgnoringQuotes(pCode, ":")
         For Each pl As String In multiparts
             If isRemark(pl) Then Return False
-            If ContainsIgnoreQuotes(pl, "ON") AndAlso (ContainsIgnoreQuotes(pl, "GOTO") OrElse ContainsIgnoreQuotes(pl, "GOSUB")) Then
+            If ContainsIgnoreQuotesIgnoreCase(pl, "ON") AndAlso (ContainsIgnoreQuotesIgnoreCase(pl, "GOTO") OrElse ContainsIgnoreQuotesIgnoreCase(pl, "GOSUB")) Then
                 Return True
             End If
         Next
@@ -120,12 +120,12 @@ Public Class convert
         For Each pl As String In multiparts
 
             If isRemark(pl) Then Return False
-            If ContainsIgnoreQuotes(pl, "GOTO") Then
+            If ContainsIgnoreQuotesIgnoreCase(pl, "GOTO") Then
                 Return True
             End If
 
-            If ContainsIgnoreQuotes(pl, "IF") AndAlso ContainsIgnoreQuotes(pl, "THEN") AndAlso
-                (Not ContainsIgnoreQuotes(pl, "GOSUB")) Then
+            If ContainsIgnoreQuotesIgnoreCase(pl, "IF") AndAlso ContainsIgnoreQuotesIgnoreCase(pl, "THEN") AndAlso
+                (Not ContainsIgnoreQuotesIgnoreCase(pl, "GOSUB")) Then
 
                 '--- now see if there is a line number
                 '--- is this line like 'if a then 6711'
@@ -146,7 +146,7 @@ Public Class convert
         Dim multiparts() As String = SplitIgnoringQuotes(pCode, ":")
         For Each pl As String In multiparts
             If isRemark(pl) Then Return False
-            If ContainsIgnoreQuotes(pl, "GOSUB") Then
+            If ContainsIgnoreQuotesIgnoreCase(pl, "GOSUB") Then
                 Return True
             End If
         Next
@@ -159,7 +159,7 @@ Public Class convert
         Dim multiparts() As String = SplitIgnoringQuotes(pCode, ":")
         For Each pl As String In multiparts
             If isRemark(pl) Then Return False
-            If ContainsIgnoreQuotes(pl, "GOTO") Then
+            If ContainsIgnoreQuotesIgnoreCase(pl, "GOTO") Then
                 Return True
             End If
         Next

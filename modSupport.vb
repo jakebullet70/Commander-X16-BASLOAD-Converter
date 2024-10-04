@@ -66,15 +66,15 @@ Module modSupport
             If Not pl.Contains("THENON", StringComparison.CurrentCultureIgnoreCase) AndAlso
                     Not pl.Contains("THEN ON", StringComparison.CurrentCultureIgnoreCase) Then
 
-                pl = ReplaceIgnoreQuotes(pl, "THENGOTO", "THEN ")
-                pl = ReplaceIgnoreQuotes(pl, "THEN GOTO", "THEN ")
-                pl = ReplaceIgnoreQuotes(pl, "THEN  GOTO", "THEN ")
+                pl = ReplaceIgnoreQuotesIgnoreCase(pl, "THENGOTO", "THEN ")
+                pl = ReplaceIgnoreQuotesIgnoreCase(pl, "THEN GOTO", "THEN ")
+                pl = ReplaceIgnoreQuotesIgnoreCase(pl, "THEN  GOTO", "THEN ")
             End If
         End If
 
     End Sub
 
-    Public Function ContainsIgnoreQuotes(input As String, target As String) As Boolean
+    Public Function ContainsIgnoreQuotesIgnoreCase(input As String, target As String) As Boolean
         Dim insideQuotes As Boolean = False
         Dim i As Integer = 0
         Dim targetLower As String = target.ToLower() ' Convert target to lowercase for comparison
@@ -127,7 +127,7 @@ Module modSupport
     End Function
 
 
-    Public Function ReplaceIgnoreQuotes(input As String, oldValue As String, newValue As String) As String
+    Public Function ReplaceIgnoreQuotesIgnoreCase(input As String, oldValue As String, newValue As String) As String
         Dim result As New System.Text.StringBuilder()
         Dim insideQuotes As Boolean = False
         Dim i As Integer = 0
